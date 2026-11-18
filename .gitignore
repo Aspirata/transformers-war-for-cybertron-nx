@@ -1,0 +1,12 @@
+# Locally supplied game media and extracted content
+*.iso
+*.ISO
+*.xiso
+*.XISO
+*.xex
+*.XEX
+/extracted/
+
+# Generated source, dependency downloads, build outputs, and logs
+/out/
+__pycache__/

@@ -1,0 +1,4 @@
+Source: https://github.com/VasilkovND/gears2-nx
+Branch: main
+Retrieved: 2026-11-18
+Branch commit observed after retrieval: c202b045cce00c96b040b095eb8e5250c7c83b59

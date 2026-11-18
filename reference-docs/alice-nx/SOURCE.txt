@@ -1,0 +1,4 @@
+Source: https://github.com/adumah/alice-nx
+Branch: main
+Retrieved: 2026-11-18
+Branch commit observed after retrieval: 379e9265d789d540903fbbe765018caca7d318bb

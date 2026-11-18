@@ -1,0 +1,4 @@
+Source: https://github.com/panalexeu/singularity-nx
+Branch: main
+Retrieved: 2026-11-18
+Branch commit observed after retrieval: 684afcf767faa1c81f567858dc2411d73251716b

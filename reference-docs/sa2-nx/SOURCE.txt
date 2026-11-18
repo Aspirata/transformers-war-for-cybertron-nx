@@ -1,0 +1,4 @@
+Source: https://github.com/ChanseyIsTheBest/sa2-nx
+Branch: main
+Retrieved: 2026-11-18
+Branch commit observed after retrieval: baf523b8e93a1b02d8b73d13aebf86780f8cc0c6

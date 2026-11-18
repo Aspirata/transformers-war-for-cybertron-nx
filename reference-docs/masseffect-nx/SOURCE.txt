@@ -1,0 +1,4 @@
+Source: https://github.com/nebadasSwifty/masseffect-nx
+Branch: main
+Retrieved: 2026-11-18
+Branch commit observed after retrieval: 650e14ef109fb0d39bd68ba8d7af61fe459265b8

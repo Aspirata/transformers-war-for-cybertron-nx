@@ -1,0 +1,7 @@
+# Short-term porting roadmap
+
+1. **Maintain repeatable code generation.** The [first Windows executable](builds.md#build-0004--first-windows-x64-executable) established that the verified `4156084C/02619995` XEX can generate and link. Keep address-specific hints reviewable and record the evidence for each one. Check indirect calls and jump tables as startup exercises more code.
+2. **Preserve the first Windows menu boot.** [Build 0016](builds.md#build-0016--first-confirmed-windows-main-menu) reached the main menu and the Campaign brightness prompt. Its source snapshot is preserved on `milestone/first-pc-boot`.
+3. **Verify one playable PC segment.** Compare the menu and the first playable campaign segment against the Xbox 360 version. Check input, UE3 file loading, Bink playback, FMOD audio, Scaleform UI, PhysX, and one checkpoint transition. Keep a known frame and build number for comparison.
+4. **Bring up the build on Switch.** Use the Gears of War 2 and Singularity references to select and pin a compatible Horizon SDK fork, then cross-compile with devkitA64 and libnx and add NRO packaging to the shared build entry points. Use PC evidence to select the first renderer path. Verify guest startup on hardware and preserve the verified commit as `milestone/first-switch-boot`.
+5. **Publish reproducible UE3 findings as each milestone lands.** Record build commands, regressions, and before-and-after checks. Once the first segment works on Switch, measure frame times, CPU/GPU load, and memory at known clocks and resolution in that same segment.
