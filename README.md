@@ -6,23 +6,23 @@ An experimental Nintendo Switch port of the Xbox 360 version of *Transformers: W
 
 ## Current status
 
-**The game is playable on Switch, but there is still plenty to fix.** In [build-56](docs/builds.md#build-56--start-a-fresh-depth-map-when-the-shadow-atlas-is-reused), I made it into the campaign and progressed through several scenes. Shadows are now visible, but the lighting still looks flat and many effects are missing. The game also suffers from freezes, occasional startup crashes, and other visual and gameplay issues. I haven't tested the entire game yet.
+**The game is playable on Switch and already looks close to the original, though there are still plenty of issues to fix.** [Build-60](docs/builds.md#build-60--decode-xenos-gamma-in-hdr-material-samples) is the best version so far: build-61 introduced a severe visual regression. Some effects are missing, the game can freeze during play, and other gameplay issues remain under investigation. The campaign has yet to be tested in full.
 
 The Switch renderer uses deko3D and a locally compiled shader pack. Some shaders are still missing from that pack, so you should expect objects or parts of scenes to disappear until those shaders are captured and compiled. The Windows build has also reached the [first Decepticon mission](docs/builds.md#build-22--register-the-decepticon-campaign-callback).
 
-I currently test on an overclocked Switch at **CPU 2397 MHz, GPU 768 MHz, and RAM 2500 MHz**. In an earlier [build-55](docs/builds.md#build-55--apply-shadow-atlas-clears-to-the-equivalent-physical-pitch) session at those clocks, the profiler recorded about **28.5 FPS on average** over 21 ten-second intervals. That session included startup and time spent inspecting a scene, so it is not a gameplay-only benchmark. In my testing, performance is currently CPU-limited. These settings describe my test configuration, not a validated performance target or requirement.
+I currently test on an overclocked Switch at **CPU 2397 MHz, GPU 768 MHz, and RAM 2500 MHz**. In an earlier [build-55](docs/builds.md#build-55--apply-shadow-atlas-clears-to-the-equivalent-physical-pitch) session at those clocks, the profiler recorded about **28.5 FPS on average** over 21 ten-second intervals. That session included startup and time spent inspecting a scene, so it is not a gameplay-only benchmark. In my testing, performance is currently CPU-limited. These settings describe my test configuration, not a validated performance target or requirement. In my testing, build-56 places noticeably less load on the GPU; build-60 needs a higher GPU clock to reach the same FPS. This observation has not yet been measured in a matched-scene benchmark.
 
 ## Future plans
 
-For now, I want to improve the rendering: bring the lighting closer to the original, restore missing effects, and work through the other visual problems. Once the game looks better, I'll focus on reducing CPU load and improving performance.
+For now, I want to improve the rendering: restore missing effects and work through the remaining visual problems. Once the game looks better, I'll focus on reducing CPU load and improving performance.
 
 ## Switch screenshots
 
-Captured during hardware testing of build-56 (local attempt 60):
+Captured during hardware testing of build-60 (local attempt 64, run 044):
 
-![Campaign gameplay on Switch](docs/images/switch-build-56-gameplay.png)
+![Campaign gameplay on Switch](docs/images/switch-build-60-view-3.png)
 
-![A campaign scene on Switch](docs/images/switch-build-56-scene.png)
+![A campaign scene on Switch](docs/images/switch-build-60-view-5.png)
 
 ## Development documentation
 

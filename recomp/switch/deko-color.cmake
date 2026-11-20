@@ -245,6 +245,13 @@ void RenderDk::WfcCaptureShaderInputs(const uint32_t* registers, const EntradaSh
               fotograma_, pass, registers[gr::XE_GPU_REG_SQ_PROGRAM_CNTL], registers[gr::XE_GPU_REG_SQ_CONTEXT_MISC],
               registers[gr::XE_GPU_REG_PA_CL_VPORT_XSCALE], registers[gr::XE_GPU_REG_PA_CL_VPORT_YSCALE],
               registers[gr::XE_GPU_REG_PA_SC_WINDOW_SCISSOR_TL], registers[gr::XE_GPU_REG_PA_SC_WINDOW_SCISSOR_BR]);
+  if (composite) {
+    const auto* constants = registers + gr::XE_GPU_REG_SHADER_CONSTANT_256_X;
+    REXLOG_INFO("WFC frame {} composite weights c0.xy ({},{}), c4.xy ({},{}), edge threshold {}",
+                fotograma_, std::bit_cast<float>(constants[0]), std::bit_cast<float>(constants[1]),
+                std::bit_cast<float>(constants[16]), std::bit_cast<float>(constants[17]),
+                std::bit_cast<float>(constants[12]));
+  }
   for (const auto& sampler : shader.samplers) {
     const auto* fetch = registers + gr::XE_GPU_REG_SHADER_CONSTANT_FETCH_00_0 + sampler.registro * 6;
     const uint32_t format = fetch[1] & 0x3F;
@@ -375,7 +382,14 @@ void main() {
   vec2 destino = gl_FragCoord.xy - vec2(copia.desplazamiento.zw);
   ivec2 origen_pixel = ivec2(destino * copia.escala.xy) +
                        copia.desplazamiento.xy + copia.desplazamiento.zw;
-  color = texelFetch(origen, origen_pixel, 0) * copia.escala.z;
+  vec4 value = texelFetch(origen, origen_pixel, 0);
+  if (copia.escala.w != 0.0) {
+    // The host FP16 target can store values outside the guest 7e3 range.
+    // Clamp in EDRAM units; the ordered comparison also maps NaNs to zero.
+    value = mix(vec4(0.0), min(value, vec4(31.875, 31.875, 31.875, 1.0)),
+                greaterThan(value, vec4(0.0)));
+  }
+  color = value * copia.escala.z;
 }
 )";
 constexpr const char* kFsWfcShadowDepth = R"(#version 460
@@ -399,7 +413,8 @@ constexpr const char* kFsCopiaProfundidad = R"(#version 460]=]
     [=[ImagenDk& destino, uint32_t dx, uint32_t dy) {
   const bool z = destino.profundidad;]=]
     [=[ImagenDk& destino, uint32_t dx, uint32_t dy, int32_t exp_bias,
-                        uint32_t source_width, uint32_t source_height, bool merge_reverse_depth) {
+                        uint32_t source_width, uint32_t source_height, bool merge_reverse_depth,
+                        bool source_7e3) {
   const bool z = destino.profundidad;]=]
     [=[  if (!vs_salida_valido_ || !(z ? fs_copia_profundidad_valido_ : fs_copia_color_valido_)) {
     return false;
@@ -411,7 +426,7 @@ constexpr const char* kFsCopiaProfundidad = R"(#version 460]=]
   }
   const bool downsample_depth = z && source_width && source_height &&
                                 source_width == ancho * 2 && source_height == alto * 2;
-  const bool typed = !z && (exp_bias || source_width || source_height ||
+  const bool typed = !z && (source_7e3 || exp_bias || source_width || source_height ||
                            origen.formato != DkImageFormat_RGBA8_Unorm ||
                            destino.formato != DkImageFormat_RGBA8_Unorm);
   const DkShader* fragment;
@@ -461,7 +476,7 @@ constexpr const char* kFsCopiaProfundidad = R"(#version 460]=]
   if (typed) {
     const float scale[4] = {source_width ? float(source_width) / float(ancho) : 1.0f,
                             source_height ? float(source_height) / float(alto) : 1.0f,
-                            std::ldexp(1.0f, exp_bias), 0.0f};
+                            std::ldexp(1.0f, exp_bias), source_7e3 ? 1.0f : 0.0f};
     std::memcpy(static_cast<uint8_t*>(ubo.cpu) + sizeof(offset), scale, sizeof(scale));
   }]=]
     [=[  ds.depthCompareOp = DkCompareOp_Always;
@@ -570,9 +585,11 @@ constexpr const char* kFsCopiaProfundidad = R"(#version 460]=]
                         formato_destino, dx, dy, resuelta->imagen.ancho, resuelta->imagen.alto, exp_bias,
                         borrar_color);
           }
+          const bool source_7e3 = wfc::deko::CanonicalTarget(wfc::deko::RenderFormat(formato_color)) ==
+                                  wfc::deko::RenderFormat::k_2_10_10_10_FLOAT;
           if (!Copiar3D(*destino_render, uint32_t(x0), uint32_t(y0),
                         encoger ? cabe_ancho : ancho, encoger ? cabe_alto : alto, resuelta->imagen, dx, dy,
-                        exp_bias, encoger ? pedido_ancho : 0, encoger ? pedido_alto : 0)) {
+                        exp_bias, encoger ? pedido_ancho : 0, encoger ? pedido_alto : 0, false, source_7e3)) {
             return Rechazar(530, "WFC typed color resolve failed");
           }
           if (scene_hdr && ancho == 1040 && alto == 592 && dx == 0 && dy == 0) {

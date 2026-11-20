@@ -73,6 +73,7 @@ file(CONFIGURE OUTPUT "${wfc_sdk_overlay}/wfc-rectangle-dksh.h"
 # The game uses all 256 Xenos pixel constants.
 wfc_overlay_sdk_file("${deko_draws}" "${wfc_sdk_overlay}/dibujos.cpp"
     "constexpr uint32_t kUboBytesPs = 224 * 16;" "constexpr uint32_t kUboBytesPs = 256 * 16;"
+    "constexpr uint32_t kUboBytesCompartidas = 31 * 16;" "constexpr uint32_t kUboBytesCompartidas = 32 * 16;"
     [=[  if (!entrada.vertices && variante_ps && en_fondo) {]=]
     [=[  if (!entrada.vertices && variante_ps && en_fondo &&
       !(variante_ps & wfc::deko::kColorExponentMask)) {]=]
@@ -186,11 +187,30 @@ wfc_overlay_sdk_file("${deko_draws}" "${wfc_sdk_overlay}/dibujos.cpp"
   }
 
   // --- Specialization and shared constants]=]
+    [=[  uint32_t especializacion = entrada->especializacion;]=]
+    [=[  uint32_t especializacion = entrada->especializacion;
+  if (compartidas[124] || compartidas[125]) {
+    especializacion |= wfc::deko::kSpecTextureGamma;
+  }]=]
     [=[  cortar_etapa(1);
   // --- Upload space for everything this draw needs from here on, all in one slot]=]
     [=[  if (ps && n_texturas && wfc::deko::FrameProbe::IsSceneTarget(uint32_t(claves[0] >> 24) & 0xFFF, pitch,
                                                          uint32_t(claves[0] >> 16) & 0xF)) {
     WfcBindNeutralLightMask(r, *ps, texturas);
+    // HLSL reads two words at byte 496, one four-bit result mask per sampler.
+    for (const auto& sampler : ps->samplers) {
+      const auto* fetch = r + gr::XE_GPU_REG_SHADER_CONSTANT_FETCH_00_0 + sampler.registro * 6;
+      const uint32_t gamma = wfc::deko::TextureGammaMask(fetch[0], fetch[3]);
+      compartidas[124 + sampler.registro / 8] |= gamma << (4 * (sampler.registro % 8));
+    }
+    if ((compartidas[124] || compartidas[125]) &&
+        (!wfc_reported_texture_gamma_ ||
+         (wfc_texture_gamma_frame_ != fotograma_ && wfc_frame_capture_.Active(fotograma_)))) {
+      wfc_reported_texture_gamma_ = true;
+      wfc_texture_gamma_frame_ = fotograma_;
+      REXLOG_INFO("WFC frame {} HDR material texture gamma, PS {:016X}, masks {:08X}/{:08X}",
+                  fotograma_, ps->huella, compartidas[124], compartidas[125]);
+    }
   }
   cortar_etapa(1);
   // --- Upload space for everything this draw needs from here on, all in one slot]=]
@@ -432,7 +452,11 @@ wfc_overlay_sdk_file("${REXSDK_DIR}/include/rex/x360/deko/render.h"
   bool wfc_reported_shadow_atlas_clear_ = false;
   bool wfc_shadow_atlas_needs_clear_ = true;
   bool wfc_reported_color_exponent_ = false;
+  bool wfc_reported_texture_gamma_ = false;
+  uint64_t wfc_texture_gamma_frame_ = UINT64_MAX;
   std::array<bool, 2> wfc_reported_float_depth_clear_{};]=]
+    "static constexpr uint32_t kPalabrasCompartidas = 124;  // 31 float4: what the deko3d library declares"
+    "static constexpr uint32_t kPalabrasCompartidas = 128;  // WFC appends per-sampler gamma masks"
     "std::array<uint32_t, 896> sombra_ps_{};   // 224 registers"
     "std::array<uint32_t, 1024> sombra_ps_{};  // 256 registers"
     "    uint32_t zancada = 0;  // bytes"
@@ -441,7 +465,7 @@ wfc_overlay_sdk_file("${REXSDK_DIR}/include/rex/x360/deko/render.h"
                 uint32_t dx, uint32_t dy);]=]
     [=[  bool Copiar3D(const ImagenDk& origen, uint32_t x0, uint32_t y0, uint32_t ancho, uint32_t alto, ImagenDk& destino,
                 uint32_t dx, uint32_t dy, int32_t exp_bias = 0, uint32_t source_width = 0,
-                uint32_t source_height = 0, bool merge_reverse_depth = false);]=]
+                uint32_t source_height = 0, bool merge_reverse_depth = false, bool source_7e3 = false);]=]
     [=[  DkShader fs_copia_color_{}, fs_copia_profundidad_{};]=]
     [=[  DkShader fs_copia_color_{}, fs_copia_profundidad_{}, fs_copia_color_tipada_{};
   bool fs_copia_color_tipada_intentada_ = false;

@@ -109,6 +109,9 @@ class FrameCapture {
       const auto path = folder / fmt::format("wfc-{}-view-{}-{}.ppm", WFC_BUILD_ATTEMPT, sequence_, kStages[slot]);
       const uint32_t row_bytes = (sample.width / 2) * 3;
       const uint32_t pixel_stride = sample.row_bytes / sample.width;
+      if (slot == uint32_t(Stage::kHdr) && sample.format == DkImageFormat_RGBA16_Float) {
+        ReportSceneRange(data + sample.offset, sample, frame);
+      }
       pixels.resize(row_bytes * (sample.height / 2));
       for (uint32_t y = 0; y < sample.height / 2; ++y) {
         const auto* input = data + sample.offset + (y * 2) * sample.row_bytes;
@@ -165,6 +168,25 @@ class FrameCapture {
     DkImageFormat format;
     bool swap_rb;
   };
+  static void ReportSceneRange(const uint8_t* data, const Sample& sample, uint64_t frame) {
+    uint32_t rgb_outside = 0;
+    uint32_t alpha_outside = 0;
+    for (uint32_t y = 0; y < sample.height; y += 2) {
+      for (uint32_t x = 0; x < sample.width; x += 2) {
+        std::array<uint16_t, 4> pixel;
+        std::memcpy(pixel.data(), data + y * sample.row_bytes + x * sizeof(pixel), sizeof(pixel));
+        const auto outside = [](uint16_t bits, float limit) {
+          const float value = rex::xenos_half_to_float(bits);
+          return !(value >= 0.0f && value <= limit);
+        };
+        rgb_outside += outside(pixel[0], 31.875f) || outside(pixel[1], 31.875f) ||
+                       outside(pixel[2], 31.875f);
+        alpha_outside += outside(pixel[3], 1.0f);
+      }
+    }
+    REXLOG_INFO("WFC frame {} 7e3 scene range before resolve: {}/{} pixels outside RGB range, {} outside alpha range",
+                frame, rgb_outside, ((sample.width + 1) / 2) * ((sample.height + 1) / 2), alpha_outside);
+  }
   std::array<Sample, kStages.size()> samples_{};
   DkMemBlock buffer_ = nullptr;
   uint64_t frame_ = UINT64_MAX;

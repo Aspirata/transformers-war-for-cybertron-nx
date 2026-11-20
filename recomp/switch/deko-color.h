@@ -17,6 +17,8 @@ using ResolveFormat = rex::graphics::xenos::ColorFormat;
 
 // Keep the SDK shader variant flags in the low byte.
 constexpr uint32_t kColorExponentMask = 0xFFFFFF00u;
+// Matches the deko3d pixel shader specialization in tools/wfc_shaders.py.
+constexpr uint32_t kSpecTextureGamma = 1u << 10;
 
 constexpr uint32_t kShadowMaskWidth = 520;
 constexpr uint32_t kShadowMaskHeight = 296;
@@ -103,6 +105,22 @@ constexpr bool IsSceneLightMaskFetch(uint32_t address_format, uint32_t size, uin
 constexpr uint32_t NeutralLightMaskSwizzle(uint32_t swizzle) {
   constexpr uint32_t kOne = 5;
   return (swizzle & 0xE00) | kOne | (kOne << 3) | (kOne << 6);
+}
+
+constexpr uint32_t TextureGammaMask(uint32_t fetch_type_and_signs, uint32_t fetch_swizzle) {
+  using rex::graphics::xenos::FetchConstantType;
+  using rex::graphics::xenos::TextureSign;
+  if ((fetch_type_and_signs & 3u) != uint32_t(FetchConstantType::kTexture)) {
+    return 0;
+  }
+  uint32_t mask = 0;
+  for (uint32_t channel = 0; channel < 4; ++channel) {
+    const uint32_t source = (fetch_swizzle >> (1 + 3 * channel)) & 7u;
+    if (source < 4 && ((fetch_type_and_signs >> (2 + 2 * source)) & 3u) == uint32_t(TextureSign::kGamma)) {
+      mask |= 1u << channel;
+    }
+  }
+  return mask;
 }
 
 constexpr RenderFormat CanonicalTarget(RenderFormat format) {

@@ -1,8 +1,10 @@
 #include "graphics.h"
 
+#include <algorithm>
 #include <array>
 #include <bit>
 #include <cstdint>
+#include <cstdlib>
 #include <fstream>
 #include <map>
 #include <set>
@@ -155,11 +157,48 @@ class SwitchCommandProcessor final : public gpu::CommandProcessor {
     renderer_.reset();
   }
 
+  void OnGammaRamp256EntryTableValueWritten() override { display_gamma_dirty_ = true; }
+
+  void UpdateDisplayGamma(gpu::xenos::TextureFormat format) {
+    const bool uses_pwl = format == gpu::xenos::TextureFormat::k_2_10_10_10 ||
+                          format == gpu::xenos::TextureFormat::k_2_10_10_10_AS_16_16_16_16;
+    if (uses_pwl ? !display_gamma_active_ : !display_gamma_dirty_) {
+      return;
+    }
+    std::array<std::array<uint16_t, 3>, 256> ramp;
+    const auto* table = gamma_ramp_256_entry_table();
+    int max_delta = 0;
+    for (uint32_t i = 0; i < ramp.size(); ++i) {
+      const uint16_t linear = uint16_t((i * 1023 + 127) / 255);
+      const auto& entry = table[i];
+      if (uses_pwl) {
+        // The current deko output shader has only the 256-entry lookup.
+        ramp[i] = {linear, linear, linear};
+      } else {
+        ramp[i] = {entry.color_10_red, entry.color_10_green, entry.color_10_blue};
+        for (const uint16_t channel : ramp[i]) {
+          max_delta = std::max(max_delta, std::abs(int(channel) - linear));
+        }
+      }
+    }
+    renderer_->RampaGamma(ramp);
+    display_gamma_active_ = !uses_pwl;
+    display_gamma_dirty_ = uses_pwl;
+    if (!uses_pwl) {
+      const auto& mid = ramp[128];
+      REXLOG_INFO("WFC: applied 256-entry display gamma at swap {}, format {}, "
+                  "midpoint RGB {}/{}/{}, max delta from linear {} (10-bit)",
+                  frames_, uint32_t(format), mid[0], mid[1], mid[2], max_delta);
+    }
+  }
+
   void IssueSwap(uint32_t frontbuffer_ptr, uint32_t width, uint32_t height) override {
     if (!renderer_ || !width || !height) {
       return;
     }
     const auto texture = rex::x360::LeerTexturaSwap(register_file_->values);
+    const auto format = gpu::xenos::TextureFormat(texture.dword[1] & 0x3F);
+    UpdateDisplayGamma(format);
     const auto presented = renderer_->Presentar(graphics_system_->presenter(), texture, width, height);
     if (!first_swap_) {
       first_swap_ = true;
@@ -316,6 +355,8 @@ class SwitchCommandProcessor final : public gpu::CommandProcessor {
   uint64_t pixel_key_ = 0;
   uint64_t frames_ = 0;
   uint64_t missing_shader_draws_ = 0;
+  bool display_gamma_dirty_ = false;
+  bool display_gamma_active_ = false;
   bool first_swap_ = false;
   bool first_present_ = false;
   bool first_copy_ = false;
