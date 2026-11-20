@@ -670,3 +670,61 @@
 0x8307F850 = { end = 0x8307F854 } # lis/addi 0x8308705C/0x83087060, store 0x83087064
 0x830C12A0 = { end = 0x830C12A4 } # lis/addi 0x83078DF4/0x83078DF8, store 0x83078DFC
 0x830C1498 = { end = 0x830C149C } # lis/addi 0x8307973C/0x83079740, store 0x83079744
+
+# Secondary vtable entries that adjust the receiver before a virtual tail call.
+0x82A259F8 = { end = 0x82A25A10 } # .rdata 0x8220D2A0, 0x8220D9A0
+0x82A33EF0 = { end = 0x82A33F04 } # .rdata 0x82213CDC
+0x82A33F90 = { end = 0x82A33FA4 } # .rdata 0x8221249C
+0x82A34030 = { end = 0x82A34044 } # .rdata 0x8221251C
+0x82A34110 = { end = 0x82A34124 } # .rdata 0x8221259C
+0x82A341F0 = { end = 0x82A34204 } # .rdata 0x8221261C
+0x82A342D0 = { end = 0x82A342E4 } # .rdata 0x82210B34
+0x82A343B0 = { end = 0x82A343C4 } # .rdata 0x82210BB4
+0x82A9B238 = { end = 0x82A9B24C } # .rdata 0x8200B3AC
+0x82A9DEF0 = { end = 0x82A9DF04 } # .rdata 0x822120B8
+0x82A9DF50 = { end = 0x82A9DF64 } # .rdata 0x822120C0
+0x82AC78A8 = { end = 0x82AC78BC } # .rdata 0x82212EB4
+0x82AC7990 = { end = 0x82AC79A4 } # .rdata 0x82212F0C
+0x82B10838 = { end = 0x82B1084C } # .rdata 0x8224C0C8
+0x82B10868 = { end = 0x82B1087C } # .rdata 0x8224C0E8
+0x82B10898 = { end = 0x82B108AC } # .rdata 0x8224C0FC
+0x830781F0 = { end = 0x83078204 } # .rdata 0x823411CC
+
+# Extended bytecode dispatcher between two registered peers.
+0x82B80108 = { end = 0x82B80134 } # .data 0x8370B420
+
+# Vtable tails that supply constant call arguments.
+0x827100F0 = { end = 0x8271010C } # .rdata 0x8201263C
+0x82B844E8 = { end = 0x82B844FC } # .rdata 0x8209CDB0
+0x82ED6548 = { end = 0x82ED659C } # .rdata 0x822FD148
+
+# Missing leaves in populated dispatch tables in .rdata and .data.
+0x825E1818 = { end = 0x825E184C } # .rdata 0x823F6D94
+0x825E19C0 = { end = 0x825E19D4 } # .rdata 0x823F6D10
+0x82652FD8 = { end = 0x8265300C } # .rdata 0x823FBE48
+0x82674EF0 = { end = 0x82674F18 } # .rdata 0x823FC354
+0x82A9B220 = { end = 0x82A9B238 } # .rdata 0x8200B3A8
+0x82A9B590 = { end = 0x82A9B5BC } # .rdata 0x8200F8A0
+0x82A9DF38 = { end = 0x82A9DF50 } # .rdata 0x822120D8
+0x82B79C68 = { end = 0x82B79C84 } # .data 0x8370B0E4
+0x82B79F38 = { end = 0x82B79F50 } # .data 0x8370B18C
+0x82B8A4B8 = { end = 0x82B8A4EC } # .rdata 0x82000B48
+0x82FBB0C0 = { end = 0x82FBB0E4 } # .rdata 0x82323368
+0x82FBB298 = { end = 0x82FBB2B4 } # .rdata 0x82328A08
+0x82FBB5F8 = { end = 0x82FBB618 } # .rdata 0x82320E60
+0x82FBB7A0 = { end = 0x82FBB7C0 } # .rdata 0x82326600
+0x8315E6A0 = { end = 0x8315E6B8 } # .rdata 0x82375758
+0x8333FFB0 = { end = 0x8333FFD8 } # .rdata 0x82392EFC
+0x8333FFD8 = { end = 0x83340000 } # .rdata 0x82392F00
+0x83340000 = { end = 0x83340028 } # .rdata 0x82392F04
+0x83340028 = { end = 0x83340050 } # .rdata 0x82392F08
+0x83340450 = { end = 0x83340470 } # .rdata 0x82392F3C
+0x83484500 = { end = 0x83484550 } # .rdata 0x823BF754
+
+# Computed callbacks that adjust arguments before the virtual tail call.
+0x8271FEC0 = { end = 0x8271FEE4 } # lis/addi 0x8270BE5C/0x8270BE60, store 0x8270BE64
+0x827C3260 = { end = 0x827C3280 } # lis/addi 0x827F8ED0/0x827F8ED4, store 0x827F8ED8
+0x8291D258 = { end = 0x8291D284 } # lis/addi 0x827DDA50/0x827DDA54, store 0x827DDA58
+0x82A30FB0 = { end = 0x82A30FCC } # lis/addi 0x82A3529C/0x82A352A0, store 0x82A352A4
+0x82A331A0 = { end = 0x82A331BC } # lis/addi 0x82A49FC4/0x82A49FC8, store 0x82A49FCC
+0x82A7BD98 = { end = 0x82A7BDB8 } # lis/addi 0x82A3F84C/0x82A3F850, store 0x82A3F854

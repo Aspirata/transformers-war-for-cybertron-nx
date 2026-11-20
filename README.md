@@ -2,7 +2,7 @@
 
 This project investigates statically recompiling the Xbox 360 release for Nintendo Switch. Its first target is a PC debug build. The public build records and UE3 troubleshooting notes are intended to help maintainers of other Xbox 360 ports reproduce the work.
 
-The bootstrap can extract the disc, verify the supported executable, and compile it for Windows x64. [Build 0016](docs/builds.md#build-0016--first-confirmed-windows-main-menu) reaches the main menu and the Campaign brightness prompt. A playable PC build and Switch NRO are pending.
+The bootstrap can extract the disc, verify the supported executable, and compile it for Windows x64 or Switch. [Build-22](docs/builds.md#build-22--register-the-decepticon-campaign-callback) reached the first Decepticon mission on PC. On Switch, [build-56](docs/builds.md#build-56--start-a-fresh-depth-map-when-the-shadow-atlas-is-reused) reached campaign gameplay; the tester reported correct shadows and progression into new scenes. It remains an experimental port with missing objects, intermittent startup failures and other unresolved issues.
 
 ## PC build
 
@@ -27,17 +27,41 @@ build.cmd "D:\Games\War for Cybertron.iso"
 sh ./build.sh "/path/to/War for Cybertron.iso"
 ```
 
-PC Debug is the default. Add `--codegen-only` to inspect the ReXGlue result without the compiler toolchain. Linux native execution still needs verification. Switch support will use `--target switch` once the runtime and NRO packaging are available.
+PC Debug is the default. Add `--codegen-only` to inspect the ReXGlue result without the compiler toolchain. Linux native execution still needs verification.
 
 Use `build.cmd extracted --pc-config relwithdebinfo` to select the matching ReXGlue runtime and graphics plugin with symbols for Windows bring-up. This configuration passes the vertex-fetch assertion observed with the Debug plugin during frontend loading. See the [desktop comparison](docs/builds.md#build-0013--compare-the-desktop-launch-with-the-non-debug-graphics-module).
 
-Each invocation writes a numbered log at `out/attempts/NNNN/build.log`. The script keeps generated source and compiler outputs under that attempt and caches extracted images by ISO SHA-256 under `out/game-data/`. Keep those folders local.
+Each invocation writes a log under its sequential number, for example `out/attempts/23/build.log`. The script keeps generated source and compiler outputs under that attempt and caches extracted images by ISO SHA-256 under `out/game-data/`. Keep those folders local.
 
 ## PC launch
 
-After a successful Windows build, run `run-pc.cmd`. It selects the newest numbered attempt with an existing executable, passes the game directory used by that attempt to ReXGlue, and stores user data under `out/pc-user-data/`.
+After a successful Windows build, run `run-pc.cmd`. It prints the number of the newest compiled build it can launch and warns if the build's recompilation fixes differ from the current workspace. It passes the game directory used by that build to ReXGlue and stores user data under `out/pc-user-data/`.
 
 If Windows reports a missing debug CRT DLL, use the debug runtime from your Microsoft C++ and Windows SDK installation. For a portable toolchain, set `WFC_WINDOWS_DEBUG_RUNTIME_DIR` to the directory containing the x64 debug runtime DLLs before building. The Debug build copies the required DLLs next to the local executable. Keep these Microsoft Debug DLLs in your local build directory.
+
+## Switch startup build
+
+Install the host ReXGlue CLI and build tools listed above. Also install devkitA64, libnx, deko3d, UAM and switch-tools from [devkitPro](https://devkitpro.org/wiki/Getting_Started). Check out the [Horizon ReXGlue source](https://github.com/nx-mod/rexglue-sdk-nx/tree/f961303fe3c6e3a90905b379ff4bf3de9a35a757) at revision `f961303fe3c6e3a90905b379ff4bf3de9a35a757` and run `python tools/switch_setup.py` from the SDK root to prepare its dependencies and the Horizon FFmpeg configuration. Place the SDK in `out/deps/rexglue-sdk-nx/` or supply its location with `--switch-sdk PATH`. Set `DEVKITPRO` or pass `--devkitpro PATH`.
+
+```bat
+build.cmd extracted --target switch
+```
+
+```sh
+sh ./build.sh extracted --target switch
+```
+
+Both entry points accept an ISO in place of `extracted`. A successful build writes `out/attempts/<number>/switch/wfc.nro`. The Switch target starts the recompiled title and connects Xenos command processing to deko3d. A local shader pack enables the geometry draws that use shaders from the capture.
+
+For a hardware check, place the NRO at `sdmc:/switch/wfc/wfc.nro` and the supported extraction at `sdmc:/switch/wfc/game/`, with `default.xex` and the complete `TransGame/` directory directly inside `game/`. Start **Transformers: War for Cybertron** from the Homebrew Menu in application mode. A black screen may appear while startup runs. After the run, check `sdmc:/switch/wfc/logs/` for the attempt number, guest entry, first Direct3D calls and any errors. See [the build history](docs/builds.md) for the expected result of each build.
+
+To prepare the shader pack, use the `logs/wfc-shaders-<number>.xsh` capture from your Switch run. Build the external `ds_hlsl` tool from the [pinned Gears of War 2 reference](https://github.com/VasilkovND/gears2-nx/tree/c202b045cce00c96b040b095eb8e5250c7c83b59) and provide its matching `shaders/XenosRecomp/shader_common.h` and DXC:
+
+```text
+python tools/wfc_shaders.py path/to/capture.xsh out/wfc-shaders.bin --translator path/to/ds_hlsl --common path/to/shader_common.h --dxc path/to/dxc
+```
+
+Repeat `--extra-capture path/to/another.xsh` to merge additional runs of the same executable revision. Place `out/wfc-shaders.bin` alongside `wfc.nro`. A fresh shader cache can increase startup time. Captures and shader packs contain data from your copy of the game, so keep them local.
 
 ## Development notes
 

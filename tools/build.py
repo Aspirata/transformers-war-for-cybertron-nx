@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "out"
 ATTEMPTS = OUT / "attempts"
 SDK_VERSION = "0.10.0"
+SWITCH_SDK_REVISION = "f961303fe3c6e3a90905b379ff4bf3de9a35a757"
 XEX_SHA256 = "107314b11111cef557b9bcee243b0a865c964f59cde99030c152265033934b22"
 WINDOWS = sys.platform == "win32"
 EXE_SUFFIX = ".exe" if WINDOWS else ""
@@ -93,7 +94,7 @@ def next_attempt():
                 if path.name.isascii() and path.name.isdecimal()]
     number = max(existing, default=0) + 1
     while True:
-        attempt = ATTEMPTS / f"{number:04d}"
+        attempt = ATTEMPTS / str(number)
         try:
             attempt.mkdir()
             return attempt
@@ -122,6 +123,56 @@ def record_revision(note):
             note(f"Local changes:\n{status.stdout.rstrip()}")
 
 
+def build_switch(args, attempt, project, cmake, run, note):
+    sdk = (args.switch_sdk or OUT / "deps" / "rexglue-sdk-nx").expanduser().resolve()
+    if not (sdk / "cmake" / "rexglue_switch.cmake").is_file():
+        raise BuildError(f"ReXGlue Switch source is missing at {sdk}. See README.md.")
+    if not (sdk / "thirdparty/FFmpeg/config_switch_aarch64.h").is_file():
+        raise BuildError(f"Run python tools/switch_setup.py in {sdk} to prepare the Horizon dependencies.")
+    note(f"ReXGlue Switch reference revision: {SWITCH_SDK_REVISION}; source: {sdk}")
+    if (sdk / ".git").exists():
+        revision = subprocess.check_output(["git", "-C", sdk, "rev-parse", "HEAD"],
+                                           text=True).strip()
+        note(f"ReXGlue Switch checkout revision: {revision}")
+        if revision != SWITCH_SDK_REVISION:
+            raise BuildError(f"Check out ReXGlue Switch revision {SWITCH_SDK_REVISION}.")
+
+    devkitpro = args.devkitpro or os.environ.get("DEVKITPRO")
+    if not devkitpro:
+        raise BuildError("Set DEVKITPRO or pass --devkitpro PATH. See README.md.")
+    devkitpro = Path(devkitpro).expanduser().resolve()
+    gcc = devkitpro / "devkitA64" / "bin" / f"aarch64-none-elf-g++{EXE_SUFFIX}"
+    if not gcc.is_file():
+        raise BuildError(f"devkitA64 compiler is missing at {gcc}.")
+    run([gcc, "--version"])
+    note(f"devkitPro: {devkitpro}")
+
+    # GCC ignores the alias attributes when the 0.10.0 template puts them before extern "C".
+    pch = project / "generated" / "default" / "wfc_pch.h"
+    header = pch.read_text(encoding="utf-8")
+    old_alias = ('  __attribute__((alias("__imp__" #name)))                           \\\n'
+                 '  __attribute__((weak, noinline)) extern "C" REX_FUNC(name);        \\\n')
+    gcc_alias = ('  extern "C" REX_FUNC(name)                                         \\\n'
+                 '      __attribute__((alias("__imp__" #name), weak, noinline));       \\\n')
+    if header.count(old_alias) != 1:
+        raise BuildError("Unexpected ReXGlue function alias template in wfc_pch.h.")
+    pch.write_text(header.replace(old_alias, gcc_alias), encoding="utf-8", newline="\n")
+
+    output = attempt / "switch"
+    run([cmake, "-S", project, "-B", output, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
+         f"-DCMAKE_TOOLCHAIN_FILE={(ROOT / 'recomp/switch/devkitA64.cmake').as_posix()}",
+         f"-DDEVKITPRO={devkitpro.as_posix()}", f"-DREXSDK_DIR={sdk.as_posix()}",
+         f"-DWFC_BUILD_ATTEMPT={attempt.name}"])
+    run([cmake, "--build", output, "--target", "wfc"])
+    artifact = output / "wfc.nro"
+    if not artifact.is_file():
+        raise BuildError(f"Build completed without the expected Switch NRO: {artifact}")
+    note(f"NRO SHA-256 = {sha256(artifact)}")
+    note(f"Result: built Switch NRO {artifact}")
+    print(f"Switch NRO: {artifact}")
+    return 0
+
+
 def build(args):
     attempt = next_attempt()
     log_path = attempt / "build.log"
@@ -135,11 +186,10 @@ def build(args):
 
         note(f"Started {datetime.now(timezone.utc).isoformat()}")
         note(f"Target: {args.target}; codegen only: {args.codegen_only}; host: {platform.platform()}")
-        note(f"PC configuration: {args.pc_config}")
+        if args.target == "pc":
+            note(f"PC configuration: {args.pc_config}")
         try:
             record_revision(note)
-            if args.target == "switch":
-                raise BuildError("The Switch runtime and NRO build are pending. Use --target pc for bring-up.")
             host = sdk_platform()
             source = args.source
             if not source:
@@ -163,7 +213,14 @@ def build(args):
             project = attempt / "project"
             run([rexglue, "init", "--project-name", "wfc", "--project-root", project,
                  "--xex-path", xex, "--game-root", data])
-            shutil.copyfile(ROOT / "recomp" / "CMakeLists.txt", project / "CMakeLists.txt")
+            config_root = ROOT / "recomp"
+            if args.target == "switch":
+                config_root /= "switch"
+                for filename in ("main.cpp", "graphics.cpp", "graphics.h", "deko-color.h",
+                                 "frame-capture.h", "frame-probe.h", "rectangle.geom"):
+                    shutil.copyfile(config_root / filename, project / "src" / filename)
+                shutil.copyfile(config_root / "deko-color.cmake", project / "deko-color.cmake")
+            shutil.copyfile(config_root / "CMakeLists.txt", project / "CMakeLists.txt")
             overrides = project / "wfc-overrides.toml"
             shutil.copyfile(ROOT / "recomp" / overrides.name, overrides)
             note(f"Codegen overrides SHA-256 = {sha256(overrides)}")
@@ -184,6 +241,8 @@ def build(args):
             if not cmake:
                 raise BuildError("CMake 3.25+ is required to compile the generated code. See README.md.")
             run([cmake, "--version"])
+            if args.target == "switch":
+                return build_switch(args, attempt, project, cmake, run, note)
             preset = f"{host}-{args.pc_config}"
             run([cmake, "--preset", preset, f"-DCMAKE_PREFIX_PATH={sdk}",
                  f"-DREXSDK_VERSION={SDK_VERSION}"], project)
@@ -214,6 +273,12 @@ def launch():
         if executable.is_file():
             data = Path(artifact["game_data"])
             validate_game(data)
+            print(f"Launching PC build {int(record.parent.name)}: {executable}", flush=True)
+            build_overrides = record.parent / "project" / "wfc-overrides.toml"
+            current_overrides = ROOT / "recomp" / build_overrides.name
+            if build_overrides.is_file() and sha256(build_overrides) != sha256(current_overrides):
+                print("This build uses different recompilation fixes from the current workspace. "
+                      "Rebuild to use the current fixes.", file=sys.stderr, flush=True)
             return subprocess.call([executable, "--game_data_root", str(data),
                                     "--user_data_root", str(OUT / "pc-user-data"),
                                     "--gpu_plugin", "xenos"],
@@ -228,6 +293,8 @@ def main():
     parser.add_argument("--pc-config", choices=("debug", "relwithdebinfo"), default="debug",
                         help="PC configuration and matching SDK runtime (default: debug)")
     parser.add_argument("--sdk", type=Path, help="ReXGlue SDK install prefix")
+    parser.add_argument("--switch-sdk", type=Path, help="ReXGlue Switch SDK source tree")
+    parser.add_argument("--devkitpro", type=Path, help="devkitPro installation for Switch")
     parser.add_argument("--extract-xiso", type=lambda path: Path(path).expanduser().resolve(),
                         help="Path to the extract-xiso executable")
     modes = parser.add_mutually_exclusive_group()
