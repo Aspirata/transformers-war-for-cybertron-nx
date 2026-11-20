@@ -6,7 +6,7 @@ An experimental Nintendo Switch port of the Xbox 360 version of *Transformers: W
 
 ## Current status
 
-**The game is playable on Switch, but there is still plenty to fix.** In [build-56](docs/builds.md#build-56--start-a-fresh-depth-map-when-the-shadow-atlas-is-reused), I made it into the campaign and progressed through several scenes. Shadows are now visible, but the lighting still looks flat and many effects are missing. There are also occasional startup crashes and other visual and gameplay issues. I haven't tested the entire game yet.
+**The game is playable on Switch, but there is still plenty to fix.** In [build-56](docs/builds.md#build-56--start-a-fresh-depth-map-when-the-shadow-atlas-is-reused), I made it into the campaign and progressed through several scenes. Shadows are now visible, but the lighting still looks flat and many effects are missing. The game also suffers from freezes, occasional startup crashes, and other visual and gameplay issues. I haven't tested the entire game yet.
 
 The Switch renderer uses deko3D and a locally compiled shader pack. Some shaders are still missing from that pack, so you should expect objects or parts of scenes to disappear until those shaders are captured and compiled. The Windows build has also reached the [first Decepticon mission](docs/builds.md#build-22--register-the-decepticon-campaign-callback).
 
