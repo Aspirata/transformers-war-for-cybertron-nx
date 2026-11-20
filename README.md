@@ -70,3 +70,7 @@ Repeat `--extra-capture path/to/another.xsh` to merge additional runs of the sam
 - [Short-term roadmap](docs/roadmap.md)
 - [Terra's Xbox 360 UE3 porting research](UE3_Xbox360_Switch_References.md)
 
+## License
+
+The project's own source is licensed under [GPL-3.0-only](LICENSE). Third-party material retains its own terms; see [third-party notices](THIRD_PARTY_NOTICES.md). The original game and its assets are not covered by this license.
+
