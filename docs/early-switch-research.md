@@ -1,10 +1,6 @@
-# Short-term porting roadmap
+# Early Switch research
 
-1. **Maintain repeatable code generation.** The [first Windows executable](builds.md#build-0004--first-windows-x64-executable) established that the verified `4156084C/02619995` XEX can generate and link. Keep address-specific hints reviewable and record the evidence for each one. Check indirect calls and jump tables as startup exercises more code.
-2. **Preserve the first Windows menu boot.** [Build 0016](builds.md#build-0016--first-confirmed-windows-main-menu) reached the main menu and the Campaign brightness prompt. Its source snapshot is preserved on `milestone/first-pc-boot-b16`.
-3. **Stabilize one playable PC segment.** Clear the campaign crashes and verify a checkpoint transition. Compare input, UE3 file loading, Bink playback, FMOD audio, Scaleform UI, and PhysX against the Xbox 360 version. Record visual issues that affect play, including mission selector text corruption.
-4. **Bring up the Renut renderer on deko3d.** [Build-29](builds.md#build-29--validate-and-submit-the-switch-startup-shader-pack) reached a visible, navigable menu with missing interface elements and background using the SDK's deko3d renderer. The first Switch boot is preserved as `milestone/first-switch-boot`. [Build-30](builds.md#build-30--coarsen-physical-memory-backing-and-add-character-selection-shaders) passed character selection and reached gameplay with a black scene behind the overlay. [Build-31](builds.md#build-31--render-and-resolve-packed-and-hdr-color-surfaces-on-switch) adds packed and HDR targets and resolves. Verify the full menu and visible gameplay on hardware and compare the first rendered scenes with the Windows build.
-5. **Profile and publish reproducible UE3 findings.** Record build commands, regressions, and before-and-after checks as each milestone lands. Once the first segment works on Switch, measure frame times, CPU/GPU load, and memory on the same route with cold and warm shader caches at known clocks and resolution.
+These historical preflight notes and static findings predate later Switch gameplay builds. For current results, see the [build history](builds.md).
 
 ## Switch deko3d preflight
 

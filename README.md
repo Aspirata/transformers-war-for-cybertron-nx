@@ -6,9 +6,13 @@ An experimental Nintendo Switch port of the Xbox 360 version of *Transformers: W
 
 ## Current status
 
-**Playable on Switch, but still a work in progress.** In [build-56](docs/builds.md#build-56--start-a-fresh-depth-map-when-the-shadow-atlas-is-reused), the tester reached campaign gameplay, progressed into new scenes, and reported correct shadows. Missing objects, occasional startup crashes, and other graphics and gameplay issues remain. The full game has not been verified. On Windows, [build-22](docs/builds.md#build-22--register-the-decepticon-campaign-callback) reached the first Decepticon mission.
+**Playable on Switch, but still a work in progress.** In [build-56](docs/builds.md#build-56--start-a-fresh-depth-map-when-the-shadow-atlas-is-reused), I reached campaign gameplay, progressed into new scenes, and observed correct shadows. Missing objects, occasional startup crashes, and other graphics and gameplay issues remain. I have not verified the full game. On Windows, [build-22](docs/builds.md#build-22--register-the-decepticon-campaign-callback) reached the first Decepticon mission.
 
-The current hardware tests use an overclocked Switch at **CPU 2397 MHz, GPU 768 MHz, and RAM 2500 MHz**. The tester reports that performance is currently CPU-limited. These settings describe the test configuration, not a validated performance target or requirement.
+I currently test on an overclocked Switch at **CPU 2397 MHz, GPU 768 MHz, and RAM 2500 MHz**. In my testing, performance is currently CPU-limited. These settings describe my test configuration, not a validated performance target or requirement.
+
+## Future plans
+
+My current priority is to fix rendering issues, especially lighting and other remaining visual problems. After that, I plan to optimize CPU performance.
 
 ### Switch screenshots
 
@@ -23,8 +27,7 @@ Captured during hardware testing of build-56 (local attempt 60):
 The development history, experiments, results, and outstanding issues are documented in the repository:
 
 - [Build history](docs/builds.md) records each build, changes, checks, and reported hardware results.
-- [Roadmap](docs/roadmap.md) tracks near-term work and remaining challenges.
-- [UE3 Xbox 360 porting research](UE3_Xbox360_Switch_References.md) and the [reference index](reference-docs/README.md) collect research and related ports, including findings useful to other projects.
+- [UE3 Xbox 360 porting research](UE3_Xbox360_Switch_References.md), [early Switch research](docs/early-switch-research.md), and the [reference index](reference-docs/README.md) collect research and related ports, including findings useful to other projects.
 
 ## Building the port
 
@@ -93,7 +96,6 @@ Repeat `--extra-capture path/to/another.xsh` to merge additional runs of the sam
 
 - [Repository instructions](AGENTS.md)
 - [Build history](docs/builds.md)
-- [Short-term roadmap](docs/roadmap.md)
 - [Terra's Xbox 360 UE3 porting research](UE3_Xbox360_Switch_References.md)
 
 ## License
