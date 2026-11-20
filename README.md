@@ -6,15 +6,17 @@ An experimental Nintendo Switch port of the Xbox 360 version of *Transformers: W
 
 ## Current status
 
-**Playable on Switch, but still a work in progress.** In [build-56](docs/builds.md#build-56--start-a-fresh-depth-map-when-the-shadow-atlas-is-reused), I reached campaign gameplay, progressed into new scenes, and observed correct shadows. Missing objects, occasional startup crashes, and other graphics and gameplay issues remain. I have not verified the full game. On Windows, [build-22](docs/builds.md#build-22--register-the-decepticon-campaign-callback) reached the first Decepticon mission.
+**The game is playable on Switch, but there is still plenty to fix.** In [build-56](docs/builds.md#build-56--start-a-fresh-depth-map-when-the-shadow-atlas-is-reused), I made it into the campaign and progressed through several scenes. Shadows are now visible, but the lighting still looks flat and many effects are missing. There are also occasional startup crashes and other visual and gameplay issues. I haven't tested the entire game yet.
+
+The Switch renderer uses deko3D and a locally compiled shader pack. Some shaders are still missing from that pack, so you should expect objects or parts of scenes to disappear until those shaders are captured and compiled. The Windows build has also reached the [first Decepticon mission](docs/builds.md#build-22--register-the-decepticon-campaign-callback).
 
 I currently test on an overclocked Switch at **CPU 2397 MHz, GPU 768 MHz, and RAM 2500 MHz**. In my testing, performance is currently CPU-limited. These settings describe my test configuration, not a validated performance target or requirement.
 
 ## Future plans
 
-My current priority is to fix rendering issues, especially lighting and other remaining visual problems. After that, I plan to optimize CPU performance.
+For now, I want to improve the rendering: bring the lighting closer to the original, restore missing effects, and work through the other visual problems. Once the game looks better, I'll focus on reducing CPU load and improving performance.
 
-### Switch screenshots
+## Switch screenshots
 
 Captured during hardware testing of build-56 (local attempt 60):
 
