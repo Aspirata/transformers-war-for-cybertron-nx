@@ -1,6 +1,6 @@
 # Transformers: War for Cybertron for Nintendo Switch
 
-> **This port is being developed entirely with the help of ChatGPT 6.2 Sol Extra High.**
+> **This port is being developed entirely with the help of ChatGPT 6.2 Sol Extra High, using [Codex](https://github.com/codex).** I direct the work, write prompts, debug and test the game on hardware.
 
 An experimental Nintendo Switch port of the Xbox 360 version of *Transformers: War for Cybertron*, built through static recompilation with ReXGlue. The game is also brought up on PC to help debug the port. You must provide your own copy of the game; this repository does not include game files, generated game code, or a prebuilt NRO.
 
