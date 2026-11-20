@@ -10,7 +10,7 @@ An experimental Nintendo Switch port of the Xbox 360 version of *Transformers: W
 
 The Switch renderer uses deko3D and a locally compiled shader pack. Some shaders are still missing from that pack, so you should expect objects or parts of scenes to disappear until those shaders are captured and compiled. The Windows build has also reached the [first Decepticon mission](docs/builds.md#build-22--register-the-decepticon-campaign-callback).
 
-I currently test on an overclocked Switch at **CPU 2397 MHz, GPU 768 MHz, and RAM 2500 MHz**. In my testing, performance is currently CPU-limited. These settings describe my test configuration, not a validated performance target or requirement.
+I currently test on an overclocked Switch at **CPU 2397 MHz, GPU 768 MHz, and RAM 2500 MHz**. In an earlier [build-55](docs/builds.md#build-55--apply-shadow-atlas-clears-to-the-equivalent-physical-pitch) session at those clocks, the profiler recorded about **28.5 FPS on average** over 21 ten-second intervals. That session included startup and time spent inspecting a scene, so it is not a gameplay-only benchmark. In my testing, performance is currently CPU-limited. These settings describe my test configuration, not a validated performance target or requirement.
 
 ## Future plans
 
