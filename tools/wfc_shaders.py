@@ -12,6 +12,7 @@ import tempfile
 CAPTURE_HEADER = b"XESH\x20\x20\x12\x19"
 PACK_HEADER = b"WFCS\x01\x00\x00\x00"
 EXEC_OPS = {1, 2, 3, 4, 5, 6, 13, 14}
+COND_JMP = 11
 CAPTURE_LIMIT = 8 * 1024 * 1024
 PACK_LIMIT = 32 * 1024 * 1024
 # Vertex attributes use the pinned renderer's semantic-to-location mapping.
@@ -29,6 +30,22 @@ MANUAL_FETCH = re.compile(
     r"\br0\.[xyzw]+ = (remapInput\(dsVfetch\((\d+), r0\.x, (?:true|false)\), g_UboLecturas\.v\[\2\]\.w\))"
 )
 R0_X_WRITE = re.compile(r"(?m)^[ \t]*r0(?:\.[yzw]*x[xyzw]*)?\s*[+*/-]?=(?!=)")
+PIXEL_SAMPLE = re.compile(r"\btfetch(?:2D|3D|Cube)\w*\(g_S(\d+)_Texture(?:2D|3D|Cube)DescriptorIndex,")
+
+TEXTURE_GAMMA = """#define WfcGammaMask(SLOT) ((DS_COMPARTIDA_UINT(496 + 4 * ((SLOT) / 8)) >> (4 * ((SLOT) % 8))) & 15u)
+float4 wfcDecodeTextureGamma(float4 sampleValue, uint mask)
+{
+    [branch] if (mask == 0)
+        return sampleValue;
+    float4 x = saturate(select(isnan(sampleValue), 0.0, sampleValue)) * 255.0;
+    float4 scale = select(x >= 192.0, 8.0, select(x >= 96.0, 4.0, select(x >= 64.0, 2.0, 1.0)));
+    float4 offset = select(x >= 192.0, -1024.0, select(x >= 96.0, -256.0, select(x >= 64.0, -64.0, 0.0)));
+    precise float4 decoded = x * scale + offset;
+    decoded = (decoded + trunc(decoded * scale / 1024.0)) / 1023.0;
+    return select((mask & uint4(1, 2, 4, 8)) != 0, decoded, sampleValue);
+}
+
+"""
 
 
 def capture_records(path):
@@ -55,23 +72,26 @@ def capture_records(path):
         yield pixel, key, data[start:cursor]
 
 
-def instruction_slots(code):
-    slots = list(struct.iter_unpack(">III", code))
+def control_flow(slots):
     code_start = len(slots)
-    executions = []
     for index, (lo, middle, hi) in enumerate(slots):
         if index >= code_start:
             break
-        for first, second in ((lo, middle & 0xFFFF),
-                              (((hi & 0xFFFF) << 16) | (middle >> 16), hi >> 16)):
-            if second >> 12 not in EXEC_OPS:
-                continue
-            address = first & 0xFFF
-            count = (first >> 12) & 7
-            if not index < address <= len(slots) - count or count > 6:
-                raise ValueError("Invalid Xenos execution clause.")
-            code_start = min(code_start, address)
-            executions.append((address, count, first >> 16))
+        words = ((lo, middle & 0xFFFF), (((hi & 0xFFFF) << 16) | (middle >> 16), hi >> 16))
+        for half, (first, second) in enumerate(words):
+            if second >> 12 in EXEC_OPS:
+                address = first & 0xFFF
+                count = (first >> 12) & 7
+                if not index < address <= len(slots) - count or count > 6:
+                    raise ValueError("Invalid Xenos execution clause.")
+                code_start = min(code_start, address)
+            yield index * 2 + half, first, second
+
+
+def instruction_slots(slots, clauses):
+    executions = [(first & 0xFFF, (first >> 12) & 7, first >> 16)
+                  for _, first, second in clauses if second >> 12 in EXEC_OPS]
+    code_start = (len(clauses) + 1) // 2
     if not executions or any(address < code_start for address, _, _ in executions):
         raise ValueError("Xenos shader has no valid execution clauses.")
     instructions = {}
@@ -84,10 +104,36 @@ def instruction_slots(code):
     return [(slot, fetch, slots[slot]) for slot, fetch in sorted(instructions.items())]
 
 
+def translator_microcode(code, clauses):
+    jumps = []
+    for index, first, second in clauses:
+        if second >> 12 != COND_JMP:
+            continue
+        target = first & 0x1FFF
+        if first & 0x2000 or second & 0x2 or target <= index:
+            # The translator already uses a general path for unconditional or backward jumps.
+            return code
+        jumps.append((index, target))
+    for position, (start, end) in enumerate(jumps):
+        if any(start < other_start < end < other_end for other_start, other_end in jumps[position + 1:]):
+            # The pinned ds_hlsl only uses the direction bit to select its control-flow emitter.
+            # Crossing forward jumps need its linear PC emitter, rather than nested if blocks.
+            # Mark one jump in this temporary input. The pack keeps the original guest microcode.
+            slot, half = divmod(start, 2)
+            offset = slot * 12 + 4 + half * 4
+            word, = struct.unpack_from(">I", code, offset)
+            patched = bytearray(code)
+            struct.pack_into(">I", patched, offset, word | (0x2 << (16 * half)))
+            return bytes(patched)
+    return code
+
+
 def make_container(pixel, code):
+    slots = list(struct.iter_unpack(">III", code))
+    clauses = list(control_flow(slots))
     elements = []
     outputs = 0
-    for slot, fetch, (word, _, _) in instruction_slots(code):
+    for slot, fetch, (word, _, _) in instruction_slots(slots, clauses):
         if not pixel and fetch and word & 31 == 0 and word & (1 << 19):
             if len(elements) == len(VERTEX_SEMANTICS):
                 raise ValueError("Shader exceeds the renderer's 16 vertex attributes.")
@@ -111,7 +157,8 @@ def make_container(pixel, code):
         shader.extend(slot | (usage << 12) | (index << 16) for slot, usage, index in elements)
     shader.extend(interpolators)
     header = [0x102A1100 | int(not pixel), 36 + len(shader) * 4, len(code), 0, 0, 0, 36, 0, 0]
-    return struct.pack(f">{len(header) + len(shader)}I", *header, *shader) + code, elements, outputs
+    container = struct.pack(f">{len(header) + len(shader)}I", *header, *shader)
+    return container + translator_microcode(code, clauses), elements, outputs
 
 
 def shader_kills(spirv):
@@ -149,6 +196,27 @@ def fix_self_fetches(text):
     if "dsVfetch(" in text[text.index("void main("):]:
         raise ValueError("Computed vertex fetch is unsupported by the pinned renderer.")
     return text.replace("[[vk::constant_id(1)]] const uint g_ManualesR0", "const uint g_ManualesR0")
+
+
+def decode_pixel_texture_gamma(text):
+    main = text.index("void main(")
+    matches = list(PIXEL_SAMPLE.finditer(text, main))
+    if not matches:
+        return text
+    for match in reversed(matches):
+        end = match.end()
+        depth = 1
+        while depth and end < len(text):
+            depth += (text[end] == "(") - (text[end] == ")")
+            end += 1
+        if depth or not 0 <= int(match[1]) < 16:
+            raise ValueError("Invalid translated pixel texture fetch.")
+        sample = text[match.start():end]
+        expression = f"wfcDecodeTextureGamma({sample}, WfcGammaMask({match[1]}))"
+        text = text[:match.start()] + expression + text[end:]
+    text = text[:main] + TEXTURE_GAMMA + text[main:]
+    return text.replace("struct NfsmwBloqueCompartidas { float4 v[31]; };",
+                        "struct NfsmwBloqueCompartidas { float4 v[32]; };")
 
 
 def translate(args, work):
@@ -190,6 +258,7 @@ def translate(args, work):
                                 "struct NfsmwBloquePs { float4 v[256]; };")
             text = text.replace("select((INDEX) < 224, g_UboPixel.v[min(INDEX, 223)], 0.0)",
                                 "select((INDEX) < 256, g_UboPixel.v[min(INDEX, 255)], 0.0)")
+            text = decode_pixel_texture_gamma(text)
         else:
             try:
                 text = fix_self_fetches(text)

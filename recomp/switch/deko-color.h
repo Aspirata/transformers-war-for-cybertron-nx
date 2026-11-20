@@ -105,6 +105,22 @@ constexpr uint32_t NeutralLightMaskSwizzle(uint32_t swizzle) {
   return (swizzle & 0xE00) | kOne | (kOne << 3) | (kOne << 6);
 }
 
+constexpr uint32_t TextureGammaMask(uint32_t fetch_type_and_signs, uint32_t fetch_swizzle) {
+  using rex::graphics::xenos::FetchConstantType;
+  using rex::graphics::xenos::TextureSign;
+  if ((fetch_type_and_signs & 3u) != uint32_t(FetchConstantType::kTexture)) {
+    return 0;
+  }
+  uint32_t mask = 0;
+  for (uint32_t channel = 0; channel < 4; ++channel) {
+    const uint32_t source = (fetch_swizzle >> (1 + 3 * channel)) & 7u;
+    if (source < 4 && ((fetch_type_and_signs >> (2 + 2 * source)) & 3u) == uint32_t(TextureSign::kGamma)) {
+      mask |= 1u << channel;
+    }
+  }
+  return mask;
+}
+
 constexpr RenderFormat CanonicalTarget(RenderFormat format) {
   switch (format) {
     case RenderFormat::k_2_10_10_10_AS_10_10_10_10:
