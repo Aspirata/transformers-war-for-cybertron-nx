@@ -21,6 +21,8 @@
 
 ## Build records and branches
 
+- Include `Co-authored-by: Codex <codex@openai.com>` in every commit message.
+
 - Give each build attempt a plain sequential number without leading zeroes before it runs and keep a local record of its commands, input hash, target, and result. Keep failed attempts so failures can be reproduced. Local numbers are scoped to the checkout.
 - Give every game build recorded or shared by the project the next repository-wide number without leading zeroes, written as `build-21`, in [the build history](docs/builds.md). Existing historical identifiers may remain as recorded. Include the date, source commit, input hash, SDK/toolchain revisions, target and artifact, observed problems, fixes and remaining blockers, and the checks actually run.
 - Do not run game builds simultaneously. For substantial or uncertain changes, make changes incrementally and test each build in sequence so regressions can be attributed to a smaller set of changes.
