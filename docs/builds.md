@@ -2,6 +2,8 @@
 
 Builds use repository-wide numbers without leading zeroes. Local attempt numbers identify checkout-specific logs and can differ from build numbers. Historical local paths retain their original spelling. Each record distinguishes the build result from launch and gameplay observations; untested behavior is not implied to work.
 
+Before publication, commit metadata was updated for privacy and co-author attribution, changing commit IDs without changing the historical source trees. The historical source IDs below are retained as recorded at build time: `ca2d5cc` corresponds to `7c5016f`, and `2bddb99` to `30d187b` in the rewritten history. Local changes recorded alongside those IDs are not represented by the corresponding commits alone.
+
 ## Common configuration
 
 Unless a record states otherwise, the recorded builds date from 18 November 2026, target Windows x64, and use the verified Xbox 360 `default.xex` with SHA-256 `107314b11111cef557b9bcee243b0a865c964f59cde99030c152265033934b22` (Title ID `4156084C`, Media ID `02619995`, version `0.0.0.4`; [disc fingerprints](../UE3_Xbox360_Switch_References.md#war-for-cybertron-discs-and-packages)). The common source is commit `ca2d5ccd0e1a7a70096f93296abf3b1241396149` with the uncommitted bootstrap and subsequent local changes; individual override hashes identify snapshots, but do not by themselves reconstruct all uncommitted changes.
