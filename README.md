@@ -1,8 +1,34 @@
 # Transformers: War for Cybertron for Nintendo Switch
 
-This project investigates statically recompiling the Xbox 360 release for Nintendo Switch. Its first target is a PC debug build. The public build records and UE3 troubleshooting notes are intended to help maintainers of other Xbox 360 ports reproduce the work.
+> **This port is being developed entirely with the help of ChatGPT 6.2 Sol Extra High.**
 
-The bootstrap can extract the disc, verify the supported executable, and compile it for Windows x64 or Switch. [Build-22](docs/builds.md#build-22--register-the-decepticon-campaign-callback) reached the first Decepticon mission on PC. On Switch, [build-56](docs/builds.md#build-56--start-a-fresh-depth-map-when-the-shadow-atlas-is-reused) reached campaign gameplay; the tester reported correct shadows and progression into new scenes. It remains an experimental port with missing objects, intermittent startup failures and other unresolved issues.
+An experimental Nintendo Switch port of the Xbox 360 version of *Transformers: War for Cybertron*, built through static recompilation with ReXGlue. The game is also brought up on PC to help debug the port. You must provide your own copy of the game; this repository does not include game files, generated game code, or a prebuilt NRO.
+
+## Current status
+
+**Playable on Switch, but still a work in progress.** In [build-56](docs/builds.md#build-56--start-a-fresh-depth-map-when-the-shadow-atlas-is-reused), the tester reached campaign gameplay, progressed into new scenes, and reported correct shadows. Missing objects, occasional startup crashes, and other graphics and gameplay issues remain. The full game has not been verified. On Windows, [build-22](docs/builds.md#build-22--register-the-decepticon-campaign-callback) reached the first Decepticon mission.
+
+The current hardware tests use an overclocked Switch at **CPU 2397 MHz, GPU 768 MHz, and RAM 2500 MHz**. The tester reports that performance is currently CPU-limited. These settings describe the test configuration, not a validated performance target or requirement.
+
+### Switch screenshots
+
+Captured during hardware testing of build-56 (local attempt 60):
+
+![Campaign gameplay on Switch](docs/images/switch-build-56-gameplay.png)
+
+![A campaign scene on Switch](docs/images/switch-build-56-scene.png)
+
+## Development documentation
+
+The development history, experiments, results, and outstanding issues are documented in the repository:
+
+- [Build history](docs/builds.md) records each build, changes, checks, and reported hardware results.
+- [Roadmap](docs/roadmap.md) tracks near-term work and remaining challenges.
+- [UE3 Xbox 360 porting research](UE3_Xbox360_Switch_References.md) and the [reference index](reference-docs/README.md) collect research and related ports, including findings useful to other projects.
+
+## Building the port
+
+The following instructions are for an experimental development build. Game content, generated files, shader captures, and build outputs stay on your machine.
 
 ## PC build
 
@@ -39,7 +65,7 @@ After a successful Windows build, run `run-pc.cmd`. It prints the number of the 
 
 If Windows reports a missing debug CRT DLL, use the debug runtime from your Microsoft C++ and Windows SDK installation. For a portable toolchain, set `WFC_WINDOWS_DEBUG_RUNTIME_DIR` to the directory containing the x64 debug runtime DLLs before building. The Debug build copies the required DLLs next to the local executable. Keep these Microsoft Debug DLLs in your local build directory.
 
-## Switch startup build
+## Switch build
 
 Install the host ReXGlue CLI and build tools listed above. Also install devkitA64, libnx, deko3d, UAM and switch-tools from [devkitPro](https://devkitpro.org/wiki/Getting_Started). Check out the [Horizon ReXGlue source](https://github.com/nx-mod/rexglue-sdk-nx/tree/f961303fe3c6e3a90905b379ff4bf3de9a35a757) at revision `f961303fe3c6e3a90905b379ff4bf3de9a35a757` and run `python tools/switch_setup.py` from the SDK root to prepare its dependencies and the Horizon FFmpeg configuration. Place the SDK in `out/deps/rexglue-sdk-nx/` or supply its location with `--switch-sdk PATH`. Set `DEVKITPRO` or pass `--devkitpro PATH`.
 
