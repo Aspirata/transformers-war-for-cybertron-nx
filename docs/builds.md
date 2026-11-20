@@ -2,7 +2,7 @@
 
 Builds use repository-wide numbers without leading zeroes. Local attempt numbers identify checkout-specific logs and can differ from build numbers. Historical local paths retain their original spelling. Each record distinguishes the build result from launch and gameplay observations; untested behavior is not implied to work.
 
-Before publication, commit metadata was updated for privacy and co-author attribution, changing commit IDs without changing the historical source trees. The historical source IDs below are retained as recorded at build time: `ca2d5cc` corresponds to `7c5016f`, and `2bddb99` to `30d187b` in the rewritten history. Local changes recorded alongside those IDs are not represented by the corresponding commits alone.
+Commit metadata was updated for privacy and co-author attribution, changing commit IDs without changing the historical source trees. The historical source IDs below are retained as recorded at build time: `ca2d5cc` corresponds to `b4b7c96`, and `2bddb99` to `92a6f47` in the rewritten history. Local changes recorded alongside those IDs are not represented by the corresponding commits alone.
 
 ## Common configuration
 
