@@ -529,4 +529,203 @@ target_sources(rexcore PRIVATE "${wfc_guest_memory}")
 set_property(SOURCE "${wfc_guest_memory}" TARGET_DIRECTORY rexcore PROPERTY INCLUDE_DIRECTORIES
     "${REXSDK_DIR}/src/core")
 
-rexglue_switch_add_nro(wfc NAME "Transformers: War for Cybertron" VERSION "0.1.${WFC_BUILD_ATTEMPT}")
+# Header enumeration can overlap a checkpoint rewrite. Use the opened stream
+# for reads so libnx I/O errors reach the existing enumeration fallback.
+set(sdk_content_manager "${REXSDK_DIR}/src/system/xam/content_manager.cpp")
+set(wfc_content_manager "${wfc_sdk_overlay}/content_manager.cpp")
+wfc_overlay_sdk_file("${sdk_content_manager}" "${wfc_content_manager}"
+    [=[#include <array>
+#include <cstring>]=]
+    [=[#include <array>
+#include <cerrno>
+#include <cstring>
+#include <mutex>]=]
+    [=[// A folder name the SD accepts, derived from the one the player sees.]=]
+    [=[std::mutex content_header_mutex;
+
+// A folder name the SD accepts, derived from the one the player sees.]=]
+    [=[  if (!std::filesystem::exists(header_path)) {
+    return;
+  }
+
+  auto file = rex::filesystem::OpenFile(header_path, "rb");
+  if (!file) {
+    return;
+  }
+
+  auto file_size = std::filesystem::file_size(header_path);
+  if (file_size < sizeof(XCONTENT_AGGREGATE_DATA) + sizeof(license_)) {
+    fclose(file);
+    return;
+  }
+
+  fseek(file, sizeof(XCONTENT_AGGREGATE_DATA), SEEK_SET);
+  fread(&license_, 1, sizeof(license_), file);
+  fclose(file);]=]
+    [=[  const std::lock_guard lock(content_header_mutex);
+  auto file = rex::filesystem::OpenFile(header_path, "rb");
+  if (!file) {
+    return;
+  }
+
+  uint32_t license = 0;
+  if (fseek(file, sizeof(XCONTENT_AGGREGATE_DATA), SEEK_SET) == 0 &&
+      fread(&license, 1, sizeof(license), file) == sizeof(license)) {
+    license_ = license;
+  }
+  fclose(file);]=]
+    [=[  auto parent_path = header_path.parent_path();
+
+  if (!std::filesystem::exists(parent_path)) {
+    if (!std::filesystem::create_directories(parent_path)) {
+      return X_ERROR_ACCESS_DENIED;
+    }
+  }
+
+  rex::filesystem::CreateEmptyFile(header_path);]=]
+    [=[  const std::lock_guard lock(content_header_mutex);
+  std::error_code ec;
+  std::filesystem::create_directories(header_path.parent_path(), ec);
+  if (ec) {
+    return X_ERROR_ACCESS_DENIED;
+  }]=]
+    [=[  fwrite(&data, 1, sizeof(XCONTENT_AGGREGATE_DATA), file);
+  if (license_mask != 0) {
+    fwrite(&license_mask, 1, sizeof(license_mask), file);
+  }
+  const bool bien = fclose(file) == 0;]=]
+    [=[  const bool header_written = fwrite(&data, 1, sizeof(data), file) == sizeof(data);
+  const bool data_written = header_written && (license_mask == 0 ||
+      fwrite(&license_mask, 1, sizeof(license_mask), file) == sizeof(license_mask));
+  const bool closed = fclose(file) == 0;
+  const bool written = data_written && closed;]=]
+    [=[              bien ? "escrita" : "FALLO al cerrarse", rex::path_to_utf8(header_path));
+  return X_ERROR_SUCCESS;]=]
+    [=[              written ? "escrita" : "FALLO al escribir", rex::path_to_utf8(header_path));
+  return written ? X_ERROR_SUCCESS : X_ERROR_ACCESS_DENIED;]=]
+    [=[  if (!std::filesystem::exists(header_file_path)) {
+    return X_ERROR_FILE_NOT_FOUND;
+  }
+
+  auto file = rex::filesystem::OpenFile(header_file_path, "rb");
+  if (!file) {
+    return X_ERROR_FILE_NOT_FOUND;
+  }
+
+  auto file_size = std::filesystem::file_size(header_file_path);
+  if (file_size < header_size) {
+    fclose(file);
+    return X_ERROR_FILE_NOT_FOUND;
+  }]=]
+    [=[  const std::lock_guard lock(content_header_mutex);
+  auto file = rex::filesystem::OpenFile(header_file_path, "rb");
+  if (!file) {
+    const int error = errno;
+    if (error != ENOENT) {
+      REXSYS_WARN("WFC: could not open save header {} (errno {})",
+                  rex::path_to_utf8(header_file_path), error);
+    }
+    return X_ERROR_FILE_NOT_FOUND;
+  }]=])
+set_source_files_properties("${sdk_content_manager}" TARGET_DIRECTORY rexruntime PROPERTIES HEADER_FILE_ONLY ON)
+target_sources(rexruntime PRIVATE "${wfc_content_manager}")
+
+# The enumeration cache and its readers need the same lock. The driver's
+# per-pad lock only protects libnx polling, not the guest slot assignments.
+set(sdk_input_system "${REXSDK_DIR}/src/input/input_system.cpp")
+set(wfc_input_system "${wfc_sdk_overlay}/input_system.cpp")
+wfc_overlay_sdk_file("${sdk_input_system}" "${wfc_input_system}"
+    [=[#include <cmath>]=]
+    [=[#include <cmath>
+#include <mutex>]=]
+    [=[constexpr uint32_t kSyntheticOrdinal = UINT32_MAX;]=]
+    [=[constexpr uint32_t kSyntheticOrdinal = UINT32_MAX;
+
+std::mutex input_system_mutex;
+
+void TracePrimaryController(uint32_t user_index, const char* query, X_RESULT result,
+                            uint32_t& previous) {
+  if (user_index == 0 && result != previous) {
+    previous = result;
+    REXLOG_INFO("WFC: guest controller 1 {} result 0x{:08X}", query, result);
+  }
+}]=]
+    [=[void InputSystem::Shutdown() {]=]
+    [=[void InputSystem::Shutdown() {
+  const std::lock_guard lock(input_system_mutex);]=]
+    [=[                                      X_INPUT_CAPABILITIES* out_caps) {
+  SCOPE_profile_cpu_f("hid");]=]
+    [=[                                      X_INPUT_CAPABILITIES* out_caps) {
+  SCOPE_profile_cpu_f("hid");
+  const std::lock_guard lock(input_system_mutex);
+  static uint32_t previous = UINT32_MAX;]=]
+    [=[  if (ids.empty()) {
+    return X_ERROR_DEVICE_NOT_CONNECTED;
+  }
+
+  // Prefer the pad in hand]=]
+    [=[  if (ids.empty()) {
+    TracePrimaryController(user_index, "capabilities", X_ERROR_DEVICE_NOT_CONNECTED, previous);
+    return X_ERROR_DEVICE_NOT_CONNECTED;
+  }
+
+  // Prefer the pad in hand]=]
+    [=[  auto* driver = DriverForDevice(chosen);
+  if (!driver) {
+    return X_ERROR_DEVICE_NOT_CONNECTED;
+  }
+  return driver->GetDeviceCapabilities(chosen, flags, out_caps);]=]
+    [=[  auto* driver = DriverForDevice(chosen);
+  const X_RESULT result = driver ? driver->GetDeviceCapabilities(chosen, flags, out_caps)
+                                 : X_ERROR_DEVICE_NOT_CONNECTED;
+  TracePrimaryController(user_index, "capabilities", result, previous);
+  return result;]=]
+    [=[X_RESULT InputSystem::GetState(uint32_t user_index, X_INPUT_STATE* out_state) {
+  SCOPE_profile_cpu_f("hid");]=]
+    [=[X_RESULT InputSystem::GetState(uint32_t user_index, X_INPUT_STATE* out_state) {
+  SCOPE_profile_cpu_f("hid");
+  const std::lock_guard lock(input_system_mutex);
+  static uint32_t previous = UINT32_MAX;]=]
+    [=[  if (!any) {
+    return X_ERROR_DEVICE_NOT_CONNECTED;
+  }
+  if (out_state) {
+    *out_state = merged;
+  }
+  return X_ERROR_SUCCESS;]=]
+    [=[  const X_RESULT result = any ? X_ERROR_SUCCESS : X_ERROR_DEVICE_NOT_CONNECTED;
+  TracePrimaryController(user_index, "state", result, previous);
+  if (any && out_state) {
+    *out_state = merged;
+  }
+  return result;]=]
+    [=[X_RESULT InputSystem::SetState(uint32_t user_index, X_INPUT_VIBRATION* vibration) {
+  SCOPE_profile_cpu_f("hid");]=]
+    [=[X_RESULT InputSystem::SetState(uint32_t user_index, X_INPUT_VIBRATION* vibration) {
+  SCOPE_profile_cpu_f("hid");
+  const std::lock_guard lock(input_system_mutex);]=]
+    [=[                                   X_INPUT_KEYSTROKE* out_keystroke) {
+  SCOPE_profile_cpu_f("hid");]=]
+    [=[                                   X_INPUT_KEYSTROKE* out_keystroke) {
+  SCOPE_profile_cpu_f("hid");
+  const std::lock_guard lock(input_system_mutex);]=])
+
+set(sdk_switch_input "${REXSDK_DIR}/src/input/switch/switch_input_driver.cpp")
+set(wfc_switch_input "${wfc_sdk_overlay}/switch_input_driver.cpp")
+wfc_overlay_sdk_file("${sdk_switch_input}" "${wfc_switch_input}"
+    [=[  if (connected != slot.connected) {
+    slot.connected = connected;]=]
+    [=[  if (connected != slot.connected) {
+    REXLOG_INFO("WFC: Switch pad slot {} {}, HID style 0x{:08X}, handheld {}",
+                index + 1, connected ? "connected" : "disconnected",
+                padGetStyleSet(&slot.pad), slot.pad.active_handheld);
+    slot.connected = connected;]=])
+set_source_files_properties("${sdk_input_system}" "${sdk_switch_input}"
+    TARGET_DIRECTORY rexinput PROPERTIES HEADER_FILE_ONLY ON)
+target_sources(rexinput PRIVATE "${wfc_input_system}" "${wfc_switch_input}")
+
+if(WFC_ICON AND EXISTS "${WFC_ICON}")
+    rexglue_switch_add_nro(wfc NAME "Transformers: War for Cybertron" VERSION "0.1.${WFC_BUILD_ATTEMPT}" ICON "${WFC_ICON}")
+else()
+    rexglue_switch_add_nro(wfc NAME "Transformers: War for Cybertron" VERSION "0.1.${WFC_BUILD_ATTEMPT}")
+endif()

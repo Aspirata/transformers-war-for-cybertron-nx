@@ -6,7 +6,7 @@ An experimental Nintendo Switch port of the Xbox 360 version of *Transformers: W
 
 ## Current status
 
-**The game is playable on Switch and already looks close to the original, though there are still plenty of issues to fix.** [Build-60](docs/builds.md#build-60--decode-xenos-gamma-in-hdr-material-samples) is the best version so far: build-61 introduced a severe visual regression. Some effects are missing, the game can freeze during play, and other gameplay issues remain under investigation. The campaign has yet to be tested in full.
+**The game is playable on Switch and already looks close to the original, though there are still plenty of issues to fix.** `Build 61c` is the best version so far. Some effects are missing, the game can freeze during play, and other gameplay issues remain under investigation. The campaign has yet to be tested in full.
 
 The Switch renderer uses deko3D and a locally compiled shader pack. Some shaders are still missing from that pack, so you should expect objects or parts of scenes to disappear until those shaders are captured and compiled. The Windows build has also reached the [first Decepticon mission](docs/builds.md#build-22--register-the-decepticon-campaign-callback).
 
@@ -83,6 +83,8 @@ sh ./build.sh extracted --target switch
 ```
 
 Both entry points accept an ISO in place of `extracted`. A successful build writes `out/attempts/<number>/switch/wfc.nro`. The Switch target starts the recompiled title and connects Xenos command processing to deko3d. A local shader pack enables the geometry draws that use shaders from the capture.
+
+To use a custom Homebrew Menu icon, place a 256×256 JPEG at `out/wfc-icon.jpg` before building. If it is absent, the build uses the libnx default icon. Supply artwork you have the right to use; this project does not distribute the optional image.
 
 For a hardware check, place the NRO at `sdmc:/switch/wfc/wfc.nro` and the supported extraction at `sdmc:/switch/wfc/game/`, with `default.xex` and the complete `TransGame/` directory directly inside `game/`. Start **Transformers: War for Cybertron** from the Homebrew Menu in application mode. A black screen may appear while startup runs. After the run, check `sdmc:/switch/wfc/logs/` for the attempt number, guest entry, first Direct3D calls and any errors. See [the build history](docs/builds.md) for the expected result of each build.
 

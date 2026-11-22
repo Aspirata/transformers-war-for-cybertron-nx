@@ -162,6 +162,7 @@ def build_switch(args, attempt, project, cmake, run, note):
     run([cmake, "-S", project, "-B", output, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
          f"-DCMAKE_TOOLCHAIN_FILE={(ROOT / 'recomp/switch/devkitA64.cmake').as_posix()}",
          f"-DDEVKITPRO={devkitpro.as_posix()}", f"-DREXSDK_DIR={sdk.as_posix()}",
+         f"-DWFC_ICON={(OUT / 'wfc-icon.jpg').as_posix()}",
          f"-DWFC_BUILD_ATTEMPT={attempt.name}"])
     run([cmake, "--build", output, "--target", "wfc"])
     artifact = output / "wfc.nro"
