@@ -16,7 +16,9 @@ I currently test on an overclocked Switch at **CPU 2397 MHz, GPU 768 MHz, and RA
 
 For now, I want to improve the rendering: restore missing effects and work through the remaining visual problems. Once the game looks better, I'll focus on reducing CPU load and improving performance.
 
-## Switch screenshots
+## Switch Demo
+
+Switch gameplay recordings from November 22, 2026, on build-60: [campaign gameplay](docs/videos/switch-campaign-gameplay.mp4) and [turret combat](docs/videos/switch-turret-gameplay.mp4). The performance overlay shows the overclock and FPS during each recording.
 
 Captured during hardware testing of build-60 (local attempt 64, run 044):
 
